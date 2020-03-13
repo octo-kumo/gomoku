@@ -7,11 +7,7 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-<<<<<<< HEAD
 const port = process.env.PORT || 3000;
-=======
-const port = process.env.port || 3000;
->>>>>>> 9c248b2701bb458f6b97de9129c31be190335784
 const DEFAULT_GAME_SIZE = 10;
 const GAMES = {};
 
