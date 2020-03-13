@@ -1,0 +1,29 @@
+{
+    "name": "gomoku",
+    "version": "0.0.1",
+    "description": "A simple board game in which the winning objective is to have 5 pieces aligned in a straight line",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/misuti/gomoku.git"
+    },
+    "keywords": [
+        "gomoku"
+    ],
+    "author": "Kumo",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/misuti/gomoku/issues"
+    },
+    "homepage": "https://github.com/misuti/gomoku#readme",
+    "dependencies": {
+        "express": "^4.17.1",
+        "express-longpoll": "0.0.6",
+        "socket.io": "^2.3.0",
+        "uuid": "^7.0.2"
+    }
+}

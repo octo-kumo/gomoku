@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <title>Gomoku</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="index.js" charset="utf-8"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+
+        td {
+            width: 26px;
+            height: 26px;
+        }
+
+        td.selected {
+            background-color: #ffff00;
+        }
+    </style>
+</head>
+
+<body>
+    <p>ID: <input id="id" /></p>
+    <button type="button" name="button" id="start">Start Game</button>
+    <button type="button" name="button" id="continue">Continue Game</button>
+    <button type="button" name="button" id="stop">Stop Game</button>
+    <hr />
+    <table id="table"></table>
+    <hr />
+    <select id="side">
+        <option value="PLAYER1" selected>Black</option>
+        <option value="PLAYER2">White</option>
+    </select>
+    <input id="x" type="number" />
+    <input id="y" type="number" />
+    <button type="button" name="button" id="play">Play Turn</button>
+    <p id="results"></p>
+
+    <script src="./jquery-3.4.1.min.js" charset="utf-8"></script>
+    <script src="./socket.io.js" charset="utf-8"></script>
+    <script type="text/javascript">
+        const table = document.getElementById("table");
+        const id = document.getElementById("id");
+        const results = document.getElementById("results");
+        const xInput = document.getElementById("x");
+        const yInput = document.getElementById("y");
+        const sideInput = document.getElementById("side");
+        const socket = io();
+        let currentGame;
+
+        if (localStorage.currentGameId) continueGame(localStorage.currentGameId, true);
+        $('#start').click(function() {
+            startGame();
+        });
+        $("#continue").click(function() {
+            continueGame(id.value);
+        });
+        $('#play').click(function() {
+            playTurn(currentGame, xInput.value, yInput.value, sideInput.value);
+        });
+        $('#stop').click(function() {
+            localStorage.clear();
+            currentGame = null;
+            updateDisplay();
+        })
+        socket.on('turn', function(data) {
+            if ((currentGame) && data.id === currentGame.id) { // Same Game!
+                console.log("Game Turn Changed!");
+                currentGame = data;
+                updateDisplay(currentGame);
+            }
+        });
+        socket.on('win', function(data) {
+            if ((currentGame) && data.id === currentGame.id) { // Same Game!
+                console.log("Game Win State Changed!");
+                currentGame = data;
+                updateDisplay(currentGame);
+            }
+        });
+
+        let selectedCell;
+
+        function updateDisplay(gomoku) {
+            table.innerHTML = "";
+            results.innerHTML = "";
+            id.value = "";
+            if (!gomoku) return;
+            if (gomoku.winningSide) results.innerHTML = gomoku.winningSide + " has won!";
+            id.value = gomoku.id;
+            for (let i = 0; i < gomoku.size; i++) {
+                let gomokuRow = gomoku.gameBoard[i];
+                let row = table.insertRow();
+                for (let j = 0; j < gomoku.size; j++) {
+                    let cell = row.insertCell();
+                    let displayText = gomokuRow[j] === "PLAYER1" ? "⚫" : (gomokuRow[j] === "PLAYER2" ? "⚪" : "");
+                    let text = document.createTextNode(displayText);
+                    cell.appendChild(text);
+                    let y = i;
+                    let x = j;
+                    cell.onclick = function() {
+                        if (selectedCell) selectedCell.classList.remove("selected");
+                        selectedCell = cell;
+                        selectedCell.classList.add("selected");
+                        xInput.value = x;
+                        yInput.value = y;
+                    };
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
