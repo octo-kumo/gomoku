@@ -99,7 +99,7 @@ class Gomoku {
         for (let y = 0; y < this.size; y++) {
             for (let x = 0; x < this.size; x++) {
                 if (this.checkHorizontal(x, y, side)) return true;
-                if (this.checkVerticle(x, y, side)) return true;
+                if (this.checkVertical(x, y, side)) return true;
                 if (this.checkDiagonal_NW_SE(x, y, side)) return true;
                 if (this.checkDiagonal_SW_NE(x, y, side)) return true;
             }
@@ -118,7 +118,7 @@ class Gomoku {
         return true;
     }
 
-    checkVerticle(x, y, side) {
+    checkVertical(x, y, side) {
         let goUp = (y - (this.winLength - 1) >= 0);
         let goDown = (y + (this.winLength - 1) < this.size);
         if ((!goUp) && (!goDown)) return false;
