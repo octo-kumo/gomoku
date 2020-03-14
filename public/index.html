@@ -12,7 +12,6 @@
         }
 
         table,
-        th,
         td {
             border: 1px solid black;
         }
@@ -20,22 +19,39 @@
         td {
             width: 26px;
             height: 26px;
+            background-position: top left 13px;
+            transform: translate(13px, 13px);
         }
 
         td.selected {
-            background-color: #ffff00;
+            background-color: #000000cc;
+        }
+
+        td span {
+            width: 26px;
+            height: 26px;
+        }
+
+        td span.black {
+            background-image: url('/images/black_piece.png');
+        }
+
+        td span.white {
+            background-image: url('/images/white_piece.png');
         }
     </style>
 </head>
 
 <body>
-    <p>ID: <input id="id" /></p>
+    <p>ID: <input id="id" placeholder="ID" /> Board Size: <input id="game-size" type="number" placeholder="Size" value="10" /></p>
+    </p>
     <button type="button" name="button" id="start">Start Game</button>
     <button type="button" name="button" id="continue">Continue Game</button>
-    <button type="button" name="button" id="stop">Stop Game</button>
+    <button type="button" name="button" id="restart">Restart Game</button>
     <hr />
-    <table id="table"></table>
+    <canvas id="canvas">Your browser do not support canvas</canvas>
     <hr />
+    <p id="results"></p>
     <select id="side">
         <option value="PLAYER1" selected>Black</option>
         <option value="PLAYER2">White</option>
@@ -43,23 +59,40 @@
     <input id="x" type="number" />
     <input id="y" type="number" />
     <button type="button" name="button" id="play">Play Turn</button>
-    <p id="results"></p>
 
     <script src="./jquery-3.4.1.min.js" charset="utf-8"></script>
     <script src="./socket.io.js" charset="utf-8"></script>
     <script type="text/javascript">
-        const table = document.getElementById("table");
+        const PLAYER_NAMES = {
+            "PLAYER1": "Black",
+            "PLAYER2": "White"
+        };
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
         const id = document.getElementById("id");
+        const gameSize = document.getElementById("game-size");
         const results = document.getElementById("results");
         const xInput = document.getElementById("x");
         const yInput = document.getElementById("y");
         const sideInput = document.getElementById("side");
         const socket = io();
         let currentGame;
+        let paramId = getParams(window.location.href).id;
+        if (paramId) continueGame(paramId, true);
+        else if (localStorage.currentGameId) continueGame(localStorage.currentGameId, true);
 
-        if (localStorage.currentGameId) continueGame(localStorage.currentGameId, true);
+        canvas.addEventListener('click', function(evt) {
+            if (!currentGame) return;
+            let newPos = getMousePos(canvas, evt);
+            if (newPos.x >= currentGame.size || newPos.y >= currentGame.size) return;
+            if (newPos.x < 0 || newPos.y < 0) return;
+            selectedPos = newPos;
+            xInput.value = selectedPos.x;
+            yInput.value = selectedPos.y;
+            updateDisplay(currentGame);
+        }, false);
         $('#start').click(function() {
-            startGame();
+            startGame(gameSize.value);
         });
         $("#continue").click(function() {
             continueGame(id.value);
@@ -67,10 +100,8 @@
         $('#play').click(function() {
             playTurn(currentGame, xInput.value, yInput.value, sideInput.value);
         });
-        $('#stop').click(function() {
-            localStorage.clear();
-            currentGame = null;
-            updateDisplay();
+        $('#restart').click(function() {
+            restartGame();
         })
         socket.on('turn', function(data) {
             if ((currentGame) && data.id === currentGame.id) { // Same Game!
@@ -87,35 +118,85 @@
             }
         });
 
-        let selectedCell;
+        let selectedPos;
+
+        function updateUrl(id) {
+            history.pushState({
+                id: id
+            }, 'Gomoku', window.location.origin + "?id=" + id)
+        }
+
+        const grid_size = 26;
 
         function updateDisplay(gomoku) {
-            table.innerHTML = "";
+            currentGame = gomoku;
+            console.log("Updating UI...");
             results.innerHTML = "";
             id.value = "";
+            gameSize.value = "";
             if (!gomoku) return;
-            if (gomoku.winningSide) results.innerHTML = gomoku.winningSide + " has won!";
+            if (gomoku.winningSide) results.innerHTML = PLAYER_NAMES[gomoku.winningSide] + " has won!";
+            else results.innerHTML = "Currently " + PLAYER_NAMES[gomoku.toPlay] + "'s turn";
             id.value = gomoku.id;
-            for (let i = 0; i < gomoku.size; i++) {
-                let gomokuRow = gomoku.gameBoard[i];
-                let row = table.insertRow();
-                for (let j = 0; j < gomoku.size; j++) {
-                    let cell = row.insertCell();
-                    let displayText = gomokuRow[j] === "PLAYER1" ? "⚫" : (gomokuRow[j] === "PLAYER2" ? "⚪" : "");
-                    let text = document.createTextNode(displayText);
-                    cell.appendChild(text);
-                    let y = i;
-                    let x = j;
-                    cell.onclick = function() {
-                        if (selectedCell) selectedCell.classList.remove("selected");
-                        selectedCell = cell;
-                        selectedCell.classList.add("selected");
-                        xInput.value = x;
-                        yInput.value = y;
-                    };
+            gameSize.value = gomoku.size;
+
+            canvas.width = grid_size * gomoku.size + grid_size + 2;
+            canvas.height = grid_size * gomoku.size + grid_size + 2;
+            console.log("Canvas Size =", canvas.width, canvas.height);
+            readyCanvas(canvas, ctx);
+            for (let y = 0; y < gomoku.size; y++) {
+                let gomokuRow = gomoku.gameBoard[y];
+                for (let x = 0; x < gomoku.size; x++) {
+                    if (!gomokuRow[x]) continue;
+                    ctx.beginPath();
+                    ctx.arc(x * grid_size + grid_size, y * grid_size + grid_size, grid_size / 2 - 2, 0, 2 * Math.PI);
+                    if (gomokuRow[x] === "PLAYER1") ctx.fillStyle = "black";
+                    else ctx.fillStyle = "white";
+                    ctx.fill();
+                    ctx.stroke();
                 }
             }
+            if (selectedPos) {
+                ctx.fillStyle = "#0009";
+                ctx.fillRect(selectedPos.x * grid_size + grid_size / 2, selectedPos.y * grid_size + grid_size / 2, grid_size, grid_size);
+            }
         }
+
+        function readyCanvas(canvas, ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            for (var x = 1; x <= canvas.width; x += 26) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            for (var y = 1; y <= canvas.height; y += 26) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        }
+
+        function getMousePos(canvas, evt) {
+            var rect = canvas.getBoundingClientRect();
+            return {
+                x: Math.floor((evt.clientX - rect.left - grid_size / 2) / grid_size),
+                y: Math.floor((evt.clientY - rect.top - grid_size / 2) / grid_size)
+            };
+        }
+
+        function debounce(func) {
+            var timer;
+            return function(event) {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(func, 100, event);
+            };
+        }
+        window.addEventListener("resize", debounce(function(e) {
+            if (!currentGame) return;
+            grid_size = Math.min(26, Math.floor(($(window).width() - 30) / currentGame.size));
+            updateDisplay(currentGame);
+        }));
     </script>
 </body>
 

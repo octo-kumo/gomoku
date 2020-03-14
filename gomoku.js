@@ -5,12 +5,12 @@ const PLAYER1 = "PLAYER1";
 const PLAYER2 = "PLAYER2";
 
 class Gomoku {
-    constructor(size) {
+    constructor(size, winLength) {
         this.id = uuidv4();
-        this.size = size;
+        this.size = size || 10;
         this.gameBoard = [];
         this.toPlay = PLAYER1;
-        this.winLength = 2;
+        this.winLength = winLength || 5;
         for (let i = 0; i < size; i++) this.gameBoard[i] = [];
         console.log("Gomoku Init | ID = " + this.id + ", Size = " + size);
     }
@@ -120,6 +120,14 @@ class Gomoku {
             if (goRightUp && (this.gameBoard[y - i][x + i] !== side)) return false;
         }
         return true;
+    }
+
+    reset() {
+        this.winningSide = null;
+        this.gameBoard = [];
+        this.toPlay = PLAYER1;
+        for (let i = 0; i < this.size; i++) this.gameBoard[i] = [];
+        console.log("Gomoku Reset | ID = " + this.id + ", Size = " + this.size);
     }
 }
 

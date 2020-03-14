@@ -9,14 +9,23 @@ const io = require('socket.io')(http);
 
 const port = process.env.PORT || 3000;
 const DEFAULT_GAME_SIZE = 10;
+const DEFAULT_WIN_LENGTH = 5;
 const GAMES = {};
 
 app.use(express.static('public'))
 
 app.get('/start-game', (req, res) => {
-    let game = new Gomoku(req.query.id || DEFAULT_GAME_SIZE);
+    let game = new Gomoku(req.query.size || DEFAULT_GAME_SIZE, req.query.winLength || DEFAULT_WIN_LENGTH);
     GAMES[game.id] = game;
     res.json(game);
+});
+
+app.get('/restart', (req, res) => {
+    let game = getGame(req, res);
+    if (game instanceof Gomoku) {
+        game.reset();
+        res.json(game);
+    } else res.status(game.code).send(game.error);
 });
 
 app.get('/game-status', (req, res) => {
