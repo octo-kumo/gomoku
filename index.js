@@ -18,7 +18,7 @@ const PLAYER_NAMES = {
     "PLAYER2": "White"
 };
 
-app.use(express.static('public'))
+app.use(express.static('public'));
 
 app.get('/start-game', (req, res) => {
     let game = new Gomoku(req.query.size || DEFAULT_GAME_SIZE, req.query.winLength || DEFAULT_WIN_LENGTH);
@@ -26,7 +26,7 @@ app.get('/start-game', (req, res) => {
         game.chat(SYSTEM, PLAYER_NAMES[game.winningSide] + " has won!");
         io.emit('win', game);
     });
-    game.chat(SYSTEM, "Game Started!")
+    game.chat(SYSTEM, "Game Started!");
     GAMES[game.id] = game;
     res.json(game);
 });
@@ -39,12 +39,12 @@ app.get('/restart', (req, res) => {
             if (error.code === 403) { // ask the other guy to confirm
                 game.chat(SYSTEM, PLAYER_NAMES[req.query.side] + " requested a restart!");
                 console.log(req.query.side, "requested", "restart");
-                io.emit('chat', game)
+                io.emit('chat', game);
             }
             res.status(error.code).send(error.error);
         } else {
             game.chat(SYSTEM, "Restart confirmed");
-            io.emit('turn', game)
+            io.emit('turn', game);
             res.json(game);
         }
     } else res.status(game.code).send(game.error);
@@ -58,12 +58,12 @@ app.get('/undo', (req, res) => {
             if (error.code === 403) { // ask the other guy to confirm
                 game.chat(SYSTEM, PLAYER_NAMES[req.query.side] + " requested a undo!");
                 console.log(req.query.side, "requested", "undo");
-                io.emit('chat', game)
+                io.emit('chat', game);
             }
             res.status(error.code).send(error.error);
         } else {
             game.chat(SYSTEM, "Undo confirmed");
-            io.emit('turn', game)
+            io.emit('turn', game);
             res.json(game);
         }
     } else res.status(game.code).send(game.error);
@@ -75,7 +75,7 @@ app.get('/chat', (req, res) => {
         let error = game.chat(req.query.side, req.query.text);
         if (error instanceof Error) res.status(error.code).send(error.error);
         else {
-            io.emit('chat', game)
+            io.emit('chat', game);
             res.json(game);
         }
     } else res.status(game.code).send(game.error);
