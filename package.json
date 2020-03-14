@@ -1,6 +1,6 @@
 {
     "name": "gomoku",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "A simple board game in which the winning objective is to have 5 pieces aligned in a straight line",
     "main": "index.js",
     "scripts": {
