@@ -4,6 +4,7 @@ const startGame = function(size, suppressError) {
         console.log("Started game with id '" + gomoku.id + "'");
         updateDisplay(gomoku);
         updateUrl(gomoku.id);
+        selectedPos = null;
     }).fail(function(e) {
         if (!suppressError) alert(e.responseText);
     });
@@ -15,6 +16,7 @@ const continueGame = function(id, suppressError) {
         console.log("Continuing game with id '" + gomoku.id + "'");
         updateDisplay(gomoku);
         updateUrl(gomoku.id);
+        selectedPos = null;
     }).fail(function(e) {
         if (!suppressError) alert(e.responseText);
     });
@@ -23,14 +25,16 @@ const continueGame = function(id, suppressError) {
 const playTurn = function(x, y, side, suppressError) {
     $.get("/play?id=" + (currentGame == null ? "" : currentGame.id) + "&x=" + x + "&y=" + y + "&side=" + side, function(gomoku, status) {
         updateDisplay(gomoku);
+        selectedPos = null;
     }).fail(function(e) {
         if (!suppressError) alert(e.responseText);
     });
 }
 
-const restartGame = function(suppressError) {
-    $.get("/restart?id=" + (currentGame == null ? "" : currentGame.id), function(gomoku, status) {
+const restartGame = function(side, suppressError) {
+    $.get("/restart?id=" + (currentGame == null ? "" : currentGame.id) + "&side=" + side, function(gomoku, status) {
         updateDisplay(gomoku);
+        selectedPos = null;
     }).fail(function(e) {
         if (!suppressError) alert(e.responseText);
     });
@@ -39,12 +43,20 @@ const restartGame = function(suppressError) {
 const chat = function(side, text, suppressError) {
     chat_input.value = "";
     $.get("/chat?id=" + (currentGame == null ? "" : currentGame.id) + "&side=" + side + "&text=" + text, function(gomoku, status) {
-        updateChats(gomoku);
+        selectedPos = null;
     }).fail(function(e) {
         if (!suppressError) alert(e.responseText);
     });
 }
 
+const undo = function(side, suppressError) {
+    $.get("/undo?id=" + (currentGame == null ? "" : currentGame.id) + "&side=" + side, function(gomoku, status) {
+        updateDisplay(gomoku);
+        selectedPos = null;
+    }).fail(function(e) {
+        if (!suppressError) alert(e.responseText);
+    });
+}
 
 /**
  * Get the URL parameters
@@ -67,9 +79,9 @@ const getParams = function(url) {
 
 function escapeHtml(unsafe) {
     return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
- }
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}

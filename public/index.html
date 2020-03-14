@@ -24,14 +24,16 @@
                     </div>
                     <input type="number" class="form-control" id="game-size" placeholder="Size" value="10" />
                 </div>
-                <div class="btn-group" role="group" aria-label="Basic example" style="margin-top:10px;max-width:400px;width:100%;left: 50%;transform: translateX(-50%);">
+                <div class="btn-group" role="group" style="margin-top:10px;max-width:400px;width:100%;left: 50%;transform: translateX(-50%);">
                     <button type="button" class="btn btn-primary" id="start">Start Game</button>
                     <button type="button" class="btn btn-info" id="continue">Continue Game</button>
                     <button type="button" class="btn btn-danger" id="restart">Restart Game</button>
                 </div>
-                <hr />
                 <canvas style="touch-action: manipulation;" id="canvas">Your browser do not support canvas</canvas>
-                <button type="button" class="btn btn-success btn-lg" id="play" style="display:block;width:100%;max-width:400px;margin:0 auto 0 auto;">Play</button>
+                <div class="btn-group btn-group-lg" role="group" style="max-width:400px;width:100%;left: 50%;transform: translateX(-50%);">
+                    <button type="button" class="btn btn-success btn-lg" id="play" style="width:70%">Play</button>
+                    <button type="button" class="btn btn-secondary btn-lg" id="undo">Undo</button>
+                </div>
             </div>
             <div class="col-md-4">
                 <h3 id="results" align="center"></h3>
@@ -63,6 +65,12 @@
     <script src="./bootstrap.min.js" charset="utf-8"></script>
     <script src="./socket.io.js" charset="utf-8"></script>
     <script type="text/javascript">
+        const socket = io();
+        let currentGame;
+        let paramId = getParams(window.location.href).id;
+        if (paramId) continueGame(paramId, true);
+        else if (localStorage.currentGameId) continueGame(localStorage.currentGameId, true);
+
         const PLAYER_NAMES = {
             "PLAYER1": "Black",
             "PLAYER2": "White"
@@ -78,29 +86,32 @@
             evt.preventDefault();
             chat(sideInput.value, chat_input.value);
         });
+        socket.on('chat', function(data) {
+            if ((currentGame) && data.id === currentGame.id) { // Same Game!
+                updateChats(data);
+            }
+        });
 
         function updateChats(gomoku) {
             currentGame = gomoku;
             chats.innerHTML = "";
             if (!currentGame.chats) return;
             for (let i = 0; i < currentGame.chats.length; i++) {
-                chats.innerHTML = "<b>" + PLAYER_NAMES[currentGame.chats[i].side] + "</b>: " + escapeHtml(currentGame.chats[i].text) + "<br>" + chats.innerHTML;
+                chats.innerHTML = "<b>" + (PLAYER_NAMES[currentGame.chats[i].side] || "System") + "</b>: " + escapeHtml(currentGame.chats[i].text) + "<br>" + chats.innerHTML;
             }
         }
+        const scale = 3; // quality control
 
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
+        ctx.scale(scale, scale);
         const id = document.getElementById("id");
         const gameSize = document.getElementById("game-size");
         const results = document.getElementById("results");
         const xInput = document.getElementById("x");
         const yInput = document.getElementById("y");
         const sideInput = document.getElementById("side");
-        const socket = io();
-        let currentGame;
-        let paramId = getParams(window.location.href).id;
-        if (paramId) continueGame(paramId, true);
-        else if (localStorage.currentGameId) continueGame(localStorage.currentGameId, true);
+        if (localStorage.side) sideInput.value = localStorage.side;
 
         canvas.addEventListener('click', function(evt) {
             if (!currentGame) return;
@@ -119,11 +130,15 @@
             continueGame(id.value);
         });
         $('#play').click(function() {
+            localStorage.side = sideInput.value;
             playTurn(xInput.value, yInput.value, sideInput.value);
         });
         $('#restart').click(function() {
-            restartGame();
-        })
+            restartGame(sideInput.value);
+        });
+        $('#undo').click(function() {
+            undo(sideInput.value);
+        });
         socket.on('turn', function(data) {
             if ((currentGame) && data.id === currentGame.id) { // Same Game!
                 console.log("Game Turn Changed!");
@@ -151,7 +166,7 @@
 
         function updateDisplay(gomoku) {
             currentGame = gomoku;
-            grid_size = Math.min(50, Math.floor(($(window).width() - 30) / currentGame.size));
+            grid_size = Math.min(50 * scale, Math.floor(($(window).width() * scale - 30) / currentGame.size));
             console.log("Updating UI...");
             results.innerHTML = "";
             id.value = "";
@@ -164,6 +179,8 @@
 
             canvas.width = grid_size * gomoku.size + grid_size + 2;
             canvas.height = grid_size * gomoku.size + grid_size + 2;
+            canvas.style.width = canvas.width / scale + "px";
+            canvas.style.height = canvas.height / scale + "px";
             console.log("Canvas Size =", canvas.width, canvas.height);
             readyCanvas(canvas, ctx);
             for (let y = 0; y < gomoku.size; y++) {
@@ -179,7 +196,7 @@
                 }
             }
             if (selectedPos && currentGame.toPlay === sideInput.value) {
-                ctx.fillStyle = "#00000077";
+                ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
                 ctx.fillRect(selectedPos.x * grid_size + grid_size / 2, selectedPos.y * grid_size + grid_size / 2, grid_size, grid_size);
             }
             updateChats(gomoku);
@@ -203,8 +220,8 @@
         function getMousePos(canvas, evt) {
             var rect = canvas.getBoundingClientRect();
             return {
-                x: Math.floor((evt.clientX - rect.left - grid_size / 2) / grid_size),
-                y: Math.floor((evt.clientY - rect.top - grid_size / 2) / grid_size)
+                x: Math.ceil((evt.clientX - rect.left - grid_size / 2) * scale / grid_size),
+                y: Math.ceil((evt.clientY - rect.top - grid_size / 2) * scale / grid_size)
             };
         }
 
@@ -217,7 +234,7 @@
         }
         window.addEventListener("resize", debounce(function(e) {
             if (!currentGame) return;
-            grid_size = Math.min(50, Math.floor(($(window).width() - 30) / currentGame.size));
+            grid_size = Math.min(50 * scale, Math.floor(($(window).width() * scale - 30) / currentGame.size));
             updateDisplay(currentGame);
         }));
     </script>

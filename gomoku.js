@@ -10,7 +10,9 @@ class Gomoku {
         this.size = size || 10;
         this.gameBoard = [];
         this.chats = [];
+        this.history = [];
         this.toPlay = PLAYER1;
+        this.confirm = {};
         this.winLength = winLength || 5;
         for (let i = 0; i < size; i++) this.gameBoard[i] = [];
         console.log("Gomoku Init | ID = " + this.id + ", Size = " + size);
@@ -48,6 +50,12 @@ class Gomoku {
         this.toPlay = (side == PLAYER1 ? PLAYER2 : PLAYER1);
         this.setCell(x, y, side);
         this.checkWinStatus();
+        this.history.push({
+            x: x,
+            y: y,
+            side: side
+        });
+        this.confirm = {};
         return true;
     }
 
@@ -58,6 +66,20 @@ class Gomoku {
             text: text
         });
         return this;
+    }
+
+    undo(side) {
+        if (!side || (side !== PLAYER1 && side !== PLAYER2)) return new Error(400, "Playing as who?");
+        if (this.history.length === 0) return new Error(400, "There are no moves to undo!");
+        this.confirm[side] = true;
+        if (this.confirm[PLAYER1] && this.confirm[PLAYER2]) {
+            this.confirm[PLAYER1] = this.confirm[PLAYER2] = false;
+            this.winningSide = null;
+            let move = this.history.pop();
+            this.toPlay = (move === PLAYER1 ? PLAYER2 : PLAYER1);
+            this.setCell(move.x, move.y, null);
+            return this;
+        } else return new Error(403, "Ask the other player to confirm!");
     }
 
     async checkWinStatus() {
@@ -129,12 +151,19 @@ class Gomoku {
         return true;
     }
 
-    reset() {
-        this.winningSide = null;
-        this.gameBoard = [];
-        this.toPlay = PLAYER1;
-        for (let i = 0; i < this.size; i++) this.gameBoard[i] = [];
-        console.log("Gomoku Reset | ID = " + this.id + ", Size = " + this.size);
+    reset(side) {
+        if (!side || (side !== PLAYER1 && side !== PLAYER2)) return new Error(400, "Playing as who?");
+        this.confirm[side] = true;
+        if (this.confirm[PLAYER1] && this.confirm[PLAYER2]) {
+            this.confirm[PLAYER1] = this.confirm[PLAYER2] = false;
+            this.winningSide = null;
+            this.gameBoard = [];
+            this.toPlay = PLAYER1;
+            for (let i = 0; i < this.size; i++) this.gameBoard[i] = [];
+            console.log("Gomoku Reset | ID = " + this.id + ", Size = " + this.size);
+            return this;
+        } else return new Error(403, "Ask the other player to confirm!");
+
     }
 }
 
