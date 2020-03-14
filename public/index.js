@@ -20,7 +20,7 @@ const continueGame = function(id, suppressError) {
     });
 }
 
-const playTurn = function(currentGame, x, y, side, suppressError) {
+const playTurn = function(x, y, side, suppressError) {
     $.get("/play?id=" + (currentGame == null ? "" : currentGame.id) + "&x=" + x + "&y=" + y + "&side=" + side, function(gomoku, status) {
         updateDisplay(gomoku);
     }).fail(function(e) {
@@ -35,6 +35,16 @@ const restartGame = function(suppressError) {
         if (!suppressError) alert(e.responseText);
     });
 }
+
+const chat = function(side, text, suppressError) {
+    chat_input.value = "";
+    $.get("/chat?id=" + (currentGame == null ? "" : currentGame.id) + "&side=" + side + "&text=" + text, function(gomoku, status) {
+        updateChats(gomoku);
+    }).fail(function(e) {
+        if (!suppressError) alert(e.responseText);
+    });
+}
+
 
 /**
  * Get the URL parameters
@@ -54,3 +64,12 @@ const getParams = function(url) {
     }
     return params;
 };
+
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+ }

@@ -6,67 +6,85 @@
     <title>Gomoku</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="index.js" charset="utf-8"></script>
-    <style>
-        table {
-            border-collapse: collapse;
-        }
-
-        table,
-        td {
-            border: 1px solid black;
-        }
-
-        td {
-            width: 26px;
-            height: 26px;
-            background-position: top left 13px;
-            transform: translate(13px, 13px);
-        }
-
-        td.selected {
-            background-color: #000000cc;
-        }
-
-        td span {
-            width: 26px;
-            height: 26px;
-        }
-
-        td span.black {
-            background-image: url('/images/black_piece.png');
-        }
-
-        td span.white {
-            background-image: url('/images/white_piece.png');
-        }
-    </style>
+    <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="./bootstrap.min.css">
 </head>
 
 <body>
-    <p>ID: <input id="id" placeholder="ID" /> Board Size: <input id="game-size" type="number" placeholder="Size" value="10" /></p>
-    </p>
-    <button type="button" name="button" id="start">Start Game</button>
-    <button type="button" name="button" id="continue">Continue Game</button>
-    <button type="button" name="button" id="restart">Restart Game</button>
-    <hr />
-    <canvas id="canvas">Your browser do not support canvas</canvas>
-    <hr />
-    <p id="results"></p>
-    <select id="side">
-        <option value="PLAYER1" selected>Black</option>
-        <option value="PLAYER2">White</option>
-    </select>
-    <input id="x" type="number" />
-    <input id="y" type="number" />
-    <button type="button" name="button" id="play">Play Turn</button>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">ID</span>
+                    </div>
+                    <input type="text" class="form-control" id="id" placeholder="ID" />
+                    <div class="input-group-append input-group-prepend">
+                        <span class="input-group-text">Size</span>
+                    </div>
+                    <input type="number" class="form-control" id="game-size" placeholder="Size" value="10" />
+                </div>
+                <div class="btn-group" role="group" aria-label="Basic example" style="margin-top:10px;max-width:400px;width:100%;left: 50%;transform: translateX(-50%);">
+                    <button type="button" class="btn btn-primary" id="start">Start Game</button>
+                    <button type="button" class="btn btn-info" id="continue">Continue Game</button>
+                    <button type="button" class="btn btn-danger" id="restart">Restart Game</button>
+                </div>
+                <hr />
+                <canvas style="touch-action: manipulation;" id="canvas">Your browser do not support canvas</canvas>
+                <button type="button" class="btn btn-success btn-lg" id="play" style="display:block;width:100%;max-width:400px;margin:0 auto 0 auto;">Play</button>
+            </div>
+            <div class="col-md-4">
+                <h3 id="results" align="center"></h3>
+                <div class="input-group">
+                    <select class="custom-select form-control" id="side">
+                        <option value="PLAYER1" selected>Black</option>
+                        <option value="PLAYER2">White</option>
+                    </select>
+                    <input id="x" type="number" placeholder="X" class="form-control" />
+                    <input id="y" type="number" placeholder="Y" class="form-control" />
+                </div>
 
+                <form id="chat_form">
+                    <div class="input-group mb-3">
+                        <input type="text" id="chat_input" class="form-control" placeholder="Chat Message" aria-label="Chat Message" autocomplete="off">
+                        <div class="input-group-append">
+                            <input class="btn btn-outline-secondary" type="submit" value="Submit" />
+                        </div>
+                    </div>
+                </form>
+                <div id="chats"></div>
+            </div>
+        </div>
+    </div>
     <script src="./jquery-3.4.1.min.js" charset="utf-8"></script>
+    <script src="./bootstrap.min.js" charset="utf-8"></script>
     <script src="./socket.io.js" charset="utf-8"></script>
     <script type="text/javascript">
         const PLAYER_NAMES = {
             "PLAYER1": "Black",
             "PLAYER2": "White"
         };
+        const chats = document.getElementById("chats");
+        const chat_input = document.getElementById("chat_input");
+        const chat_form = document.getElementById("chat_form");
+        if (chat_form.addEventListener) chat_form.addEventListener("submit", function(evt) {
+            evt.preventDefault();
+            chat(sideInput.value, chat_input.value);
+        }, true);
+        else chat_form.attachEvent('onsubmit', function(evt) {
+            evt.preventDefault();
+            chat(sideInput.value, chat_input.value);
+        });
+
+        function updateChats(gomoku) {
+            currentGame = gomoku;
+            chats.innerHTML = "";
+            if (!currentGame.chats) return;
+            for (let i = 0; i < currentGame.chats.length; i++) {
+                chats.innerHTML = "<b>" + PLAYER_NAMES[currentGame.chats[i].side] + "</b>: " + escapeHtml(currentGame.chats[i].text) + "<br>" + chats.innerHTML;
+            }
+        }
+
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         const id = document.getElementById("id");
@@ -98,7 +116,7 @@
             continueGame(id.value);
         });
         $('#play').click(function() {
-            playTurn(currentGame, xInput.value, yInput.value, sideInput.value);
+            playTurn(xInput.value, yInput.value, sideInput.value);
         });
         $('#restart').click(function() {
             restartGame();
@@ -126,10 +144,11 @@
             }, 'Gomoku', window.location.origin + "?id=" + id)
         }
 
-        const grid_size = 26;
+        let grid_size = 50;
 
         function updateDisplay(gomoku) {
             currentGame = gomoku;
+            grid_size = Math.min(50, Math.floor(($(window).width() - 30) / currentGame.size));
             console.log("Updating UI...");
             results.innerHTML = "";
             id.value = "";
@@ -156,22 +175,23 @@
                     ctx.stroke();
                 }
             }
-            if (selectedPos) {
-                ctx.fillStyle = "#0009";
+            if (selectedPos && currentGame.toPlay === sideInput.value) {
+                ctx.fillStyle = "#00000077";
                 ctx.fillRect(selectedPos.x * grid_size + grid_size / 2, selectedPos.y * grid_size + grid_size / 2, grid_size, grid_size);
             }
+            updateChats(gomoku);
         }
 
         function readyCanvas(canvas, ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
-            for (var x = 1; x <= canvas.width; x += 26) {
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
+            for (var x = 1 + grid_size; x <= canvas.width - grid_size; x += grid_size) {
+                ctx.moveTo(x, grid_size);
+                ctx.lineTo(x, canvas.height - grid_size);
             }
-            for (var y = 1; y <= canvas.height; y += 26) {
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
+            for (var y = 1 + grid_size; y <= canvas.height - grid_size; y += grid_size) {
+                ctx.moveTo(grid_size, y);
+                ctx.lineTo(canvas.width - grid_size, y);
             }
             ctx.strokeStyle = "black";
             ctx.stroke();
@@ -194,7 +214,7 @@
         }
         window.addEventListener("resize", debounce(function(e) {
             if (!currentGame) return;
-            grid_size = Math.min(26, Math.floor(($(window).width() - 30) / currentGame.size));
+            grid_size = Math.min(50, Math.floor(($(window).width() - 30) / currentGame.size));
             updateDisplay(currentGame);
         }));
     </script>

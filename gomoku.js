@@ -9,6 +9,7 @@ class Gomoku {
         this.id = uuidv4();
         this.size = size || 10;
         this.gameBoard = [];
+        this.chats = [];
         this.toPlay = PLAYER1;
         this.winLength = winLength || 5;
         for (let i = 0; i < size; i++) this.gameBoard[i] = [];
@@ -31,19 +32,11 @@ class Gomoku {
         this.gameBoard[y][x] = side;
     }
 
-    hasEnded() {
-        return !(!this.winningSide)
+    setWinCallback(winCallback) {
+        this.winCallback = winCallback;
     }
 
-    getWinningSide() {
-        return this.winningSide;
-    }
-
-    setWinningSide(side) {
-        this.winningSide = side;
-    }
-
-    play(x, y, side, checkWinResults) {
+    play(x, y, side) {
         if (this.winningSide) return new Error(400, "Game has already ended!");
         if ((!x) || (!y) || (!side)) return new Error(400, "X, Y and side are required!");
         if (isNaN(x) || isNaN(y)) return new Error(400, "X or Y are not integers!");
@@ -54,16 +47,30 @@ class Gomoku {
         if (this.gameBoard[y][x]) return new Error(400, "There is already a piece at " + x + ", " + y);
         this.toPlay = (side == PLAYER1 ? PLAYER2 : PLAYER1);
         this.setCell(x, y, side);
-
-        const finalInstance = this;
-        (async function() {
-            console.log("Checking Win Condition for " + side);
-            let won = finalInstance.checkWin(side);
-            console.log("Won = " + won);
-            if (won) finalInstance.setWinningSide(side);
-            checkWinResults(won);
-        })();
+        this.checkWinStatus();
         return true;
+    }
+
+    chat(side, text) {
+        if ((!side) || (!text)) return new Error(400, "Message and player name need to be given!");
+        this.chats.push({
+            side: side,
+            text: text
+        });
+        return this;
+    }
+
+    async checkWinStatus() {
+        if (this.checkWin(PLAYER1)) {
+            console.log("Checking Win Condition for " + PLAYER1);
+            this.winningSide = PLAYER1;
+            if (this.winCallback) this.winCallback();
+        }
+        if (this.checkWin(PLAYER2)) {
+            console.log("Checking Win Condition for " + PLAYER2);
+            this.winningSide = PLAYER2;
+            if (this.winCallback) this.winCallback();
+        }
     }
 
     checkWin(side) {
